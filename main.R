@@ -4,7 +4,7 @@ library(readxl)
 library(brms)
 library(parallelly)
 library(remotes)
-# Package to deal with results (its not an official CRAN package yet. Needs package "remotes")
+# Package to deal with results ( not an official CRAN package yet. Needs package "remotes")
 #remotes::install_github('m-clark/mixedup')
 library(mixedup)
 library(tidyr)
@@ -35,29 +35,10 @@ df$participant <- factor(df$participant)
 # Display a summary of the processed dataframe
 summary(df)
 
-# Then we get the categories we want to observe
-target_values <- c(unique(df$structure))
-
-# And we create binary columns of them if they were found or not
-df$overt_connective <-
-  ifelse(df$structure %in% target_values[1], 1, 0)
-df$elliptical <- ifelse(df$structure %in% target_values[2], 1, 0)
-df$juxtaposition <- ifelse(df$structure %in% target_values[3], 1, 0)
-
-# We factor them, as they're categorical values
-df$overt_connective <- factor(df$overt_connective)
-df$elliptical <- factor(df$elliptical)
-df$juxtaposition <- factor(df$juxtaposition)
-
-# And we observe them
-summary(df)
-
 # NOTE:
-# We have 1 numeric value (distance), 4 categorical values (structure, that we
-# won't use anymore; overt_connective; elliptical and juxtaposition) as well as
-# two more numeric values (questions and participants) that we will analyze as
-# random values. This means we have to analyze how influential (or not) these
-# are in our analysis.
+# We have 1 numeric value (distance), 1 categorical value (structure) as well as
+# two more categorical values (questions and participants) that we will have as
+# random values.
 
 ############ MULTINOMIAL MODEL ###########
 
@@ -66,15 +47,19 @@ nc_cores <- availableCores()
 
 # Fit a multinomial model using brms
 fit_multinomial_model = brm(
-  # Note: the brms package does a categorical model, but by adding
-  # the random effect (1 | x) we are making it multinomial.
+  # Note: a categorical distribution is a form of multinomial distribution that
+  # models the outcome of n experiments, where the outcome of each trial 
+  # has a categorical distribution. In this case, it describes the possible 
+  # results of a random variable (distance) that can take on one of K possible 
+  # categories (structure), with the probability of each category separately 
+  # specified. See: https://en.wikipedia.org/wiki/Categorical_distribution#cite_note-minka-2
   structure ~ distance + (1 | question) + (1 | participant), 
   data  = df,
   family = categorical(link=logit, refcat = NA),
   # Number of available cores
   cores = nc_cores,
-  iter = 100, #standard: 2000. Reduce for faster processing.
-  warmup = 10, #standard: 1000. Reduce for faster processing.
+  iter = 2000, #standard: 2000. Reduce for faster processing.
+  warmup = 1000, #standard: 1000. Reduce for faster processing.
   prior = c(
     set_prior("normal(0, 1)", dpar = "muelliptical"),
     set_prior("normal(0, 2)", dpar = "mujuxtaposition"),
@@ -94,7 +79,7 @@ summary(fit_multinomial_model)
 ranef(fit_multinomial_model)
 
 # Model checking with posterior predictive checks
-pp_check(fit_multinomial_model)
+pp_check(fit_multinomial_model) # shows dens_overlay plot by default
 
 # Extract random effects into a nice table and saves it
 results <- mixedup::extract_random_effects(fit_multinomial_model) 
@@ -122,19 +107,28 @@ write.csv(prob_table, file = "results/prob_table.csv", row.names = FALSE)
 ############ RESULTS AFTER LOGISTIC REGRESSION ###########
 
 # ELLIPTICAL:
-summary(lm(distance ~ elliptical, data = prob_table))
-# P-value:
-#Coefficient:
+summary(lm(elliptical ~ distance, data = prob_table))
+plot(prob_table$distance, prob_table$elliptical, ylim=c(0,1))
+lm_model <- lm(prob_table$elliptical ~ prob_table$distance)
+abline(lm_model, col = "blue")
+# P-value: < 2.16e-09
+#Coefficient: -0.0007504
 
 # JUXTAPOSITION:
-summary(lm(distance ~ juxtaposition, data = prob_table))
-# P-value:
-#Coefficient:
+summary(lm(juxtaposition ~ distance, data = prob_table))
+plot(prob_table$distance, prob_table$juxtaposition, ylim=c(0,1))
+lm_model <- lm(prob_table$juxtaposition ~ prob_table$distance)
+abline(lm_model, col = "blue")
+# P-value: < 2e-16
+#Coefficient: -0.0004410
 
 # OVERT CONNECTIVE:
-summary(lm(distance ~ overt_connective, data = prob_table))
-# P-value:
-#Coefficient:
+summary(lm(overt_connective ~ distance, data = prob_table))
+plot(prob_table$distance, prob_table$overt_connective, ylim=c(0,1))
+lm_model <- lm(prob_table$overt_connective ~ prob_table$distance)
+abline(lm_model, col = "blue")
+# P-value: <2e-16
+#Coefficient: 0.0012242
 
 ############ REFERENCES ###########
 
