@@ -35,6 +35,30 @@ df$participant <- factor(df$participant)
 # Display a summary of the processed dataframe
 summary(df)
 
+# Then we get the categories we want to observe
+target_values <- c(unique(df$structure))
+
+# And we create binary columns of them if they were found or not
+df$overt_connective <-
+  ifelse(df$structure %in% target_values[1], 1, 0)
+df$elliptical <- ifelse(df$structure %in% target_values[2], 1, 0)
+df$juxtaposition <- ifelse(df$structure %in% target_values[3], 1, 0)
+
+# We factor them, as they're categorical values
+df$overt_connective <- factor(df$overt_connective)
+df$elliptical <- factor(df$elliptical)
+df$juxtaposition <- factor(df$juxtaposition)
+
+# And we observe them
+summary(df)
+
+# NOTE:
+# We have 1 numeric value (distance), 4 categorical values (structure, that we
+# won't use anymore; overt_connective; elliptical and juxtaposition) as well as
+# two more numeric values (questions and participants) that we will analyze as
+# random values. This means we have to analyze how influential (or not) these
+# are in our analysis.
+
 ############ MULTINOMIAL MODEL ###########
 
 # Gets number of cores available in the machine
@@ -49,11 +73,16 @@ fit_multinomial_model = brm(
   family = categorical(link=logit, refcat = NA),
   # Number of available cores
   cores = nc_cores,
-  iter = 2000, #standard: 2000. Reduce for faster processing.
-  warmup = 1000, #standard: 1000. Reduce for faster processing.
-  # get all parameters and parameters classes to define priors automatically
-  prior = get_prior(structure ~ distance + (1 | question) + (1 | participant), 
-                     data = df, family = categorical),
+  iter = 100, #standard: 2000. Reduce for faster processing.
+  warmup = 10, #standard: 1000. Reduce for faster processing.
+  prior = c(
+    set_prior("normal(0, 1)", dpar = "muelliptical"),
+    set_prior("normal(0, 2)", dpar = "mujuxtaposition"),
+    set_prior("normal(0, 3)", dpar = "muovertconnective")
+  ),
+  sample_prior = "yes",
+  thin = 5,
+  control = list(adapt_delta = 0.99),
   # saves all information
   save_pars = save_pars(group = TRUE, all = TRUE),
 )
