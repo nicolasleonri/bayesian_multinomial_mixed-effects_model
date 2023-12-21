@@ -9,6 +9,7 @@ library(remotes)
 library(mixedup)
 library(tidyr)
 library(dplyr)
+library(posterior)
 
 ############ PROCESSING ###########
 
@@ -60,7 +61,7 @@ fit_multinomial_model = brm(
   cores = nc_cores,
   iter = 2000, #standard: 2000. Reduce for faster processing.
   warmup = 1000, #standard: 1000. Reduce for faster processing.
-  prior = c(
+  tuniprior = c(
     set_prior("normal(0, 1)", dpar = "muelliptical"),
     set_prior("normal(0, 2)", dpar = "mujuxtaposition"),
     set_prior("normal(0, 3)", dpar = "muovertconnective")
@@ -75,8 +76,19 @@ fit_multinomial_model = brm(
 # Display a summary of the fitted model
 summary(fit_multinomial_model)
 
+# Display posterior mean
+posterior_means <- posterior_samples(fit_multinomial_model)$mean
+draws <- as_draws_array(fit_multinomial_model)
+results_posterior_means <- summarise_draws(draws, default_summary_measures())
+# Posterior mean (elliptical): -0.204 
+# Posterior mean (juxtaposition): -0.0994
+# Posterior mean (overt connective): -0.0956
+
 # Display random effects for intercepts
 ranef(fit_multinomial_model)
+posterior_mean_alpha <- mean(posterior_samples[, "alpha"])
+posterior_mean_beta <- mean(posterior_samples[, "beta"])
+posterior_mean_sigma <- mean(posterior_samples[, "sigma"])
 
 # Model checking with posterior predictive checks
 pp_check(fit_multinomial_model) # shows dens_overlay plot by default
@@ -129,6 +141,9 @@ lm_model <- lm(prob_table$overt_connective ~ prob_table$distance)
 abline(lm_model, col = "blue")
 # P-value: <2e-16
 #Coefficient: 0.0012242
+
+ 
+
 
 ############ REFERENCES ###########
 
