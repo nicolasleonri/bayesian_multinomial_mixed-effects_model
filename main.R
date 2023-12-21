@@ -80,9 +80,13 @@ summary(fit_multinomial_model)
 posterior_means <- posterior_samples(fit_multinomial_model)$mean
 draws <- as_draws_array(fit_multinomial_model)
 results_posterior_means <- summarise_draws(draws, default_summary_measures())
-# Posterior mean (elliptical): -0.204 
-# Posterior mean (juxtaposition): -0.0994
-# Posterior mean (overt connective): -0.0956
+# Posterior mean with distance (elliptical): -0.204 
+# Posterior mean with distance (juxtaposition): -0.0994
+# Posterior mean with distance (overt connective): -0.0956
+
+# Posterior mean with intercept (elliptical): 2,39
+# Posterior mean with intercept (juxtaposition): 1,62
+# Posterior mean with intercept (overt connective): 2,35
 
 # Display random effects for intercepts
 ranef(fit_multinomial_model)
